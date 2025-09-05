@@ -16,7 +16,7 @@ builder.Services.AddDbContext<ProductDbContext>(opt =>
 // Add controllers and Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-// Add this in your Program.cs or Startup.cs (where you configure Swagger)
+// Add this in your Program.cs 
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "ProductApi", Description = "The ultimate e-commerce product API", Version = "v1" });
