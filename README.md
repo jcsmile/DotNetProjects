@@ -1,3 +1,67 @@
 # DotNetProjects
-Repository for projects using .NET technology.
-- ProductApi is a webapi built on .NET 9 for a demo purpose. The API provides regular product functions seen in an eCommerce application. This API uses AWS cognito OAuth for authentication and authorization. In order to test it, make a http post to /api/auth/token to get an access token. Then put this token as authorization bearer token when revoking any endpoint of this api. To illustrate the data storage, this API connects to Entityframework in-memory db which is filled with predefined product data when the application starts. The API docment can be viewed through [/swagger/index.html]. API endpoints can be tested through swagger UI as well.
+
+Welcome to the **DotNetProjects** repository!  
+This repository contains a collection of projects leveraging the power of .NET technology.
+
+---
+
+## Projects
+
+### 🚀 ProductApi
+
+- **Description:**  
+  ProductApi is a Web API built on **.NET 9** for demonstration purposes.  
+  The API provides standard product management features typically seen in eCommerce applications.
+
+- **Key Features:**
+  - Product CRUD operations (Create, Read, Update, Delete)
+  - Authentication and authorization using **AWS Cognito** (OAuth)
+  - Designed as a learning resource for .NET and cloud authentication
+
+---
+
+## Getting Started
+
+1. **Clone the Repository**
+   ```sh
+   git clone https://github.com/jcsmile/DotNetProjects.git
+   ```
+
+2. **Navigate to the Project Directory**
+   ```sh
+   cd DotNetProjects/ProductApi
+   ```
+
+3. **Restore Dependencies**
+   ```sh
+   dotnet restore
+   ```
+
+4. **Run the API**
+   ```sh
+   dotnet run
+   ```
+
+---
+
+## Technologies Used
+
+- [.NET 9](https://dotnet.microsoft.com/)
+- [AWS Cognito](https://aws.amazon.com/cognito/)
+- RESTful API design
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## Author
+
+- [jcsmile](https://github.com/jcsmile)
+
+---
+
+Feel free to explore, fork, and contribute!
