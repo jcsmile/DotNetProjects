@@ -67,7 +67,7 @@ public class ProductsController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    [Authorize(Roles = "Admin")] // Only Admins can delete
+    [Authorize] // Only Admins can delete
     public async Task<IActionResult> Delete(string id)
     {
         var product = await _context.Products.FindAsync(id);

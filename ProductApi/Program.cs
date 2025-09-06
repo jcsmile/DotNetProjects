@@ -21,28 +21,35 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "ProductApi", Description = "The ultimate e-commerce product API", Version = "v1" });
 
-    // Add JWT Bearer
-    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    // Add OAuth2 configuration
+    var cognito = builder.Configuration.GetSection("Authentication:Cognito");
+    var scope= cognito["Scope"];
+
+    // configure OAuth2 Client Credentials Flow
+    c.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header using the Bearer scheme. Example: \"Authorization: Bearer {token}\"",
-        Name = "Authorization",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
-        Scheme = "bearer"
+        Type = SecuritySchemeType.OAuth2,
+        Flows = new OpenApiOAuthFlows
+        {
+            ClientCredentials = new OpenApiOAuthFlow
+            {
+                TokenUrl = new Uri($"{cognito["CognitoDomain"]}/oauth2/token"),
+                Scopes = !string.IsNullOrEmpty(scope)
+                    ? new Dictionary<string, string> { { scope, "Custom Scope" } }
+                   : new Dictionary<string, string>()
+
+            }
+        }
     });
 
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            new OpenApiSecurityScheme
             {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "oauth2" }
             },
-            Array.Empty<string>()
+            new[] { scope }
         }
     });
 });
@@ -61,20 +68,28 @@ if (string.IsNullOrEmpty(jwtKey))
     throw new InvalidOperationException("JWT Key is not configured.");
 }
 
-// Add Authentication and Authorization
+// Add Cognito Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        var cognito = builder.Configuration.GetSection("Authentication:Cognito");
+        options.Authority = cognito["Authority"];
+        options.Audience = cognito["ClientId"];
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = false,
+            ValidateIssuer = true,
+            ValidIssuer = cognito["Authority"],
             ValidateAudience = false,
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey!))
+            //ValidAudience = cognito["ClientId"],
+            ValidAudiences = new[] { cognito["ClientId"], "other-expected-audience" },
+            ValidateLifetime = true
         };
     });
 
 builder.Services.AddAuthorization();
+
+// Register HttpClient for AuthController
+builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
@@ -84,9 +99,21 @@ app.UseMiddleware<ExceptionMiddleware>();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Product API v1");
+
+        var cognito = builder.Configuration.GetSection("Authentication:Cognito");
+        var scope = cognito["Scope"];
+        // Let Swagger UI use client credentials flow
+        c.OAuthClientId(cognito["ClientId"]);
+        c.OAuthClientSecret(cognito["ClientSecret"]);
+        c.OAuthScopes(scope ?? "resource.read");
+    });
 }
 
+app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
