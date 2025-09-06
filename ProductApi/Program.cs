@@ -23,22 +23,21 @@ builder.Services.AddSwaggerGen(c =>
 
     // Add OAuth2 configuration
     var cognito = builder.Configuration.GetSection("Authentication:Cognito");
+    var scope= cognito["Scope"];
 
+    // configure OAuth2 Client Credentials Flow
     c.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
     {
         Type = SecuritySchemeType.OAuth2,
         Flows = new OpenApiOAuthFlows
         {
-            AuthorizationCode = new OpenApiOAuthFlow
+            ClientCredentials = new OpenApiOAuthFlow
             {
-                AuthorizationUrl = new Uri($"{cognito["CognitoDomain"]}/oauth2/authorize"),
                 TokenUrl = new Uri($"{cognito["CognitoDomain"]}/oauth2/token"),
-                Scopes = new Dictionary<string, string>
-                {
-                    { "openid", "OpenID Connect scope" },
-                    { "email", "Access to your email" },
-                    { "profile", "Access to your profile" }
-                }
+                Scopes = !string.IsNullOrEmpty(scope)
+                    ? new Dictionary<string, string> { { scope, "Custom Scope" } }
+                   : new Dictionary<string, string>()
+
             }
         }
     });
@@ -50,7 +49,7 @@ builder.Services.AddSwaggerGen(c =>
             {
                 Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "oauth2" }
             },
-            new[] { "openid", "email", "profile" }
+            new[] { scope }
         }
     });
 });
@@ -75,17 +74,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     {
         var cognito = builder.Configuration.GetSection("Authentication:Cognito");
         options.Authority = cognito["Authority"];
+        options.Audience = cognito["ClientId"];
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
             ValidIssuer = cognito["Authority"],
             ValidateAudience = false,
-            ValidAudience = cognito["ClientId"],
+            //ValidAudience = cognito["ClientId"],
+            ValidAudiences = new[] { cognito["ClientId"], "other-expected-audience" },
             ValidateLifetime = true
         };
     });
 
 builder.Services.AddAuthorization();
+
+// Register HttpClient for AuthController
+builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
@@ -95,17 +99,17 @@ app.UseMiddleware<ExceptionMiddleware>();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
+
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "Product API v1");
 
         var cognito = builder.Configuration.GetSection("Authentication:Cognito");
-
-        // 配置 Swagger UI 使用 Cognito 登录
+        var scope = cognito["Scope"];
+        // Let Swagger UI use client credentials flow
         c.OAuthClientId(cognito["ClientId"]);
         c.OAuthClientSecret(cognito["ClientSecret"]);
-        c.OAuthUsePkce(); // 推荐使用 PKCE
-        c.OAuthScopes("openid", "email", "profile");
+        c.OAuthScopes(scope ?? "resource.read");
     });
 }
 
